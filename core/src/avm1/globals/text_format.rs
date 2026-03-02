@@ -112,7 +112,14 @@ fn set_size<'gc>(
     text_format.size = match value {
         Value::Undefined | Value::Null => None,
         value if activation.swf_version() < 8 => Some(value.coerce_to_i32(activation)?.into()),
-        value => Some(round_to_even(value.coerce_to_f64(activation)?).into()),
+        value => {
+            let n = value.coerce_to_f64(activation)?;
+            if n.is_finite() {
+                Some(round_to_even(n).into())
+            } else {
+                None
+            }
+        }
     };
     Ok(())
 }
@@ -522,7 +529,8 @@ fn get_text_extent<'gc>(
         .get(1)
         .cloned()
         .map(|v| v.coerce_to_f64(activation))
-        .transpose()?;
+        .transpose()?
+        .filter(|w| w.is_finite());
 
     let temp_edittext = EditText::new(
         activation.context,
